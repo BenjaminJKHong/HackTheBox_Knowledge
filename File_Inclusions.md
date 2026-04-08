@@ -11,7 +11,7 @@
 
 ---
 
-## 📌 What are File Inclusions?
+## 📌 1.1 What are File Inclusions?
 
 **File Inclusion** vulnerabilities occur when a web application allows users to control which file is loaded by the server-side script. 
 
@@ -22,7 +22,9 @@ Modern back-end languages use HTTP parameters to specify what is shown on the we
 ## ✨ Cause and Effect
 
 - 🔴 **The Cause** : Insecure coding practices where user-controlled parameters (like `?page=about`) are passed directly into file-loading functions without explicit filtering.
+  
 - 🟢 **The Effect**: Attackers can traverse directories and read local files on the hosting server.
+  
 - 💥 **Impact Escalation** ; 
   - **Source Code Disclosure:** Reveals backend logic, potentially exposing previously unknown vulnerabilities.
   - **Sensitive Data Exposure:** Leaks credentials, database keys, and server configuration files.
@@ -65,7 +67,65 @@ Functions like Response.WriteFile or @Html.Partial() taking unvalidated file pat
 
 ## 🧱 Function Capabilities: Read vs Execute
 Identifying the exact function in use determines the exploit path during a code audit. Executing files can lead to immediate code execution, while reading file content is limited to source code disclosure.
+
 <img width="634" height="755" alt="image" src="https://github.com/user-attachments/assets/48dea19c-1906-4907-a7c7-6527b4bed734" />
+
+---
+---
+## 📂 1.2 Exploiting LFI & Path Traversal
+
+Once an LFI vulnerability is identified, the goal is to manipulate the input parameter to read sensitive local files on the server, such as `/etc/passwd` on Linux or `C:\Windows\boot.ini` on Windows.
+
+### 🟢 Basic LFI
+
+If the web application passes the input directly into the `include()` function without any modification, you can specify the absolute path to the file.
+
+```php
+// Backend PHP
+include($_GET['language']);
+```
+
+## 🔀 Path Traversal
+Developers often append or prepend strings to the user parameter.
+```PHP
+// Backend PHP
+include("./languages/" . $_GET['language']);
+```
+To bypass this, we use Relative Paths to traverse directories by adding ../ (which refers to the parent directory). We go back several directories until we reach the root path (/), and then specify our target file.
+
+- Payload: ?language=../../../../etc/passwd
+
+  💡 Pro-Tip: Adding excessive ../ sequences will not break the path once you reach the root directory. However, for clean exploits and reports, calculate the exact number of directories you are away from the root.
+
+
+## 🛡️ Bypassing String Manipulations
+**1. Filename Prefix**
+
+**Code     :** include("lang_" . $_GET['language']);
+
+**Bypass   :** Prefix a / to trick the system into treating the prefix as a directory.
+
+**Payload  :** ?language=/../../../etc/passwd (Note: The directory lang_/ must exist for this to work).
+
+
+**2. Appended Extensions**
+
+**Code  :** include($_GET['language'] . ".php");
+
+**Bypass:** Requires advanced techniques (Null Byte Injection %00 or Path Truncation in older PHP versions).
+
+
+
+## 🔄 Second-Order LFI Attacks
+LFI isn't limited to direct URL parameters. A Second-Order Attack occurs when a malicious payload is stored in a database and later pulled by an insecure file-loading function.
+
+
+**1) 💉 Inject :** A user registers an account with a malicious username: ../../../etc/passwd
+
+**2) ⚙️ Execute:** The application attempts to load the user's avatar from /profile/$username/avatar.png.
+
+**3) 💥 Impact :** The system dynamically constructs the path /profile/../../../etc/passwd/avatar.png, triggering the LFI when the avatar loads.
+
 
 ## Recap
 ---
