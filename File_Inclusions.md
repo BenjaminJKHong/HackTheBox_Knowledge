@@ -108,11 +108,13 @@ To bypass this, we use Relative Paths to traverse directories by adding ../ (whi
 **Payload  :** ?language=/../../../etc/passwd (Note: The directory lang_/ must exist for this to work).
 
 
+
 **2. Appended Extensions**
 
 **Code  :** include($_GET['language'] . ".php");
 
 **Bypass:** Requires advanced techniques (Null Byte Injection %00 or Path Truncation in older PHP versions).
+
 
 
 
